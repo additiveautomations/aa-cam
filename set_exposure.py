@@ -1,12 +1,15 @@
-import os
 import io
 import sys
-from time import sleep
+import math
+from pathlib import Path
+
+import picamera
 from PIL import Image
 from PIL import ImageStat
-import picamera
-import math
 
+from p_iris_ctrl import p_iris_ctrl
+
+home = str(Path.home())
 
 iso_options = [100, 200, 320, 400, 500, 640, 800]
 speed_options = [500, 1000, 2000, 4000, 8000, 16667, 33333]
@@ -25,7 +28,7 @@ camera = picamera.PiCamera()
 
 
 def aperture(value):
-    os.system('python3 p-iris_ctrl.py ' + str(int(value)))
+    p_iris_ctrl(target_aperture=int(value))
 
 
 def write_to_file(filename, content):
@@ -63,7 +66,7 @@ def capture_preview():
     stream = io.BytesIO()
     camera.iso = iso_options[iso]
     camera.shutter_speed = speed_options[speed]
-    camera.zoom = (0.1,0.25,0.4,0.5)
+    camera.zoom = (0, 0, 1, 1)  # (x, y, w, h)
     camera.capture(stream, format='jpeg', resize=(320, 240))
     stream.seek(0)
     image = Image.open(stream)
@@ -95,7 +98,7 @@ try:
                 iris = saturate(iris - math.ceil(exposure_error * GAIN), 0, 100)
             elif speed < len(speed_options) - 1:
                 speed += 1
-            elif iso < len(iso_options) -1:
+            elif iso < len(iso_options) - 1:
                 iso += 1
             else:
                 print("Environment too dark! Unable to expose image to target of " + str(TARGET_XP))
@@ -109,13 +112,13 @@ try:
             elif iso > 0:
                 iso -= 1
             else:
-                print("Environment too bright! unable to expose image to target of ", + str(TARGET_XP))
+                print("Environment too bright! unable to expose image to target of " + str(TARGET_XP))
 
         else:
             ready = True
 
     print("Settings successful! Writing to camera_settings.txt")
-    write_to_file("camera_settings.txt", str(iso_options[iso]) + "\n" + str(speed_options[speed]) + "\n")
+    write_to_file(home + "/aa-cam/camera_settings.txt", str(iso_options[iso]) + "\n" + str(speed_options[speed]) + "\n")
 
 finally:
     camera.stop_preview()
